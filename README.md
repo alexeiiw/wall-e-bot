@@ -47,13 +47,20 @@ Si ninguno matchea, cae a `CHAT`.
 
 | # | Intención | Frases de ejemplo | ¿Usa LLM? |
 |---|---|---|---|
-| 1 | `HELP` | "wally qué puedes hacer", "wally ayuda" | No |
-| 2 | `SAVE_MEMORY` | "recuerda que...", "recordá que...", "acuérdate que...", "no olvides que..." | No |
-| 3 | `SAVE_NOTE` | "anota que...", "anotá que...", "apunta que...", "apúntame que..." | No |
-| 4 | `SUMMARIZE_NOTES` | "resumime mis notas", "hazme un resumen de mis ideas" | Sí (siempre) |
-| 5 | `SEARCH_NOTES` | "busca en mis notas sobre...", "qué tengo sobre...", "revisa mis notas de..." | Solo si hay más de 3 resultados |
-| 6 | `LIST_NOTES` | "dime", "muéstrame", "qué notas tengo", "mis notas", "mis ideas" | No |
-| 7 | `CHAT` | cualquier otro mensaje (catch-all) | Sí (siempre) |
+| 1 | `TRIVIAL` | "hola", "ok", "gracias" | No |
+| 2 | `HELP` | "wally qué puedes hacer", "wally ayuda" | No |
+| 3 | `SAVE_MEMORY` | "recuerda que...", "recordá que...", "acuérdate que...", "no olvides que..." | No |
+| 4 | `SAVE_NOTE` | "anota que...", "anotá que...", "apunta que...", "apúntame que..." | No |
+| 5 | `SUMMARIZE_NOTES` | "resumime mis notas", "hazme un resumen de mis ideas" | Sí |
+| 6 | `SEARCH_NOTES` | "busca en mis notas sobre...", "qué tengo sobre...", "revisa en mis notas de..." | Solo si hay más de 3 resultados |
+| 7 | `LIST_NOTES` | "dime", "muéstrame", "qué notas tengo", "mis notas", "mis ideas" | No |
+| 8 | `NEEDS_EXTERNAL_TOOL` | "busca en internet...", "googlea...", "consulta web..." | No |
+| 9 | `OUT_OF_SCOPE` | "qué clima hace", "noticias", "precio actual..." | No |
+| 10 | `CHAT` | conversación general con contexto suficiente | Sí |
+
+`CHAT` ya no es un fallback universal para todo: antes de llamar al LLM, el router
+descarta saludos, confirmaciones, herramientas externas no integradas y consultas
+de datos externos o en tiempo real.
 
 `HELP` responde con un breef de qué puede hacer WALL-E hoy y qué modelo de Ollama
 tiene instalado (`bot/intent_router.py` -> `COMANDOS_DISPONIBLES`). Se actualiza

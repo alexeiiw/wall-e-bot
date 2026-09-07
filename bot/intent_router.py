@@ -30,13 +30,61 @@ _PATRON_RESUMIR = re.compile(
 )
 
 _PATRON_BUSCAR = re.compile(
-    r"(?:busca(?:r)?|qu[eé] tengo sobre|revisa)\s+(?:en\s+mis\s+notas\s+)?(?:sobre|de|acerca de)?\s*(.+)",
+    r"(?:busca(?:r)?|revisa)\s+(?:en\s+)?mis\s+notas\s+(?:sobre|de|acerca de)?\s*(.+)"
+    r"|qu[eé]\s+tengo\s+sobre\s+(.+)",
     re.IGNORECASE
 )
 
 _PATRON_AYUDA = re.compile(
     r"\bwall[y-]?e?\b.*(?:qu[eé]\s+(?:puedes|pod[eé]s|sabes)\s+hacer|ay[uú]dame|\bayuda\b)",
     re.IGNORECASE
+)
+
+_PATRON_FUERA_DE_ALCANCE = re.compile(
+    r"\b(?:clima|pron[oó]stico|temperatura|noticias?|[uú]ltima\s+hora|"
+    r"d[oó]lar|cotizaci[oó]n|precio\s+actual|en\s+tiempo\s+real)\b",
+    re.IGNORECASE
+)
+
+_PATRON_HERRAMIENTA_EXTERNA = re.compile(
+    r"\b(?:busca\s+en\s+internet|buscar\s+en\s+internet|googlea|consulta\s+(?:web|internet)|"
+    r"(?:consulta|revisa|abre|sincroniza)\s+(?:mi\s+)?(?:calendario|agenda|correo|email)|"
+    r"(?:llama|consulta|usa)\s+(?:una\s+)?api)\b",
+    re.IGNORECASE
+)
+
+_SALUDOS_SIMPLES = {
+    "hola",
+    "buenas",
+    "buen dia",
+    "buen día",
+    "buenos dias",
+    "buenas tardes",
+    "buenas noches",
+    "hey",
+}
+
+_CONFIRMACIONES_SIMPLES = {
+    "ok",
+    "okay",
+    "si",
+    "sí",
+    "dale",
+    "va",
+    "listo",
+    "perfecto",
+    "gracias",
+    "muchas gracias",
+}
+
+_RESPUESTA_FUERA_DE_ALCANCE = (
+    "No tengo acceso a datos externos o en tiempo real desde aquí. "
+    "Puedo ayudarte con tus notas, memoria y tareas personales guardadas."
+)
+
+_RESPUESTA_HERRAMIENTA_EXTERNA = (
+    "Todavía no tengo integrada esa herramienta externa. "
+    "Puedo trabajar con tu memoria y tus notas locales."
 )
 
 # Lista de comandos disponibles, para el breef de ayuda. Se va sumando una
@@ -47,7 +95,8 @@ COMANDOS_DISPONIBLES = [
     ("Resumir tus notas", "Decime 'resumime mis notas' y te doy un resumen con IA."),
     ("Buscar en tus notas", "Decime 'busca en mis notas sobre...' y te muestro lo que encuentre."),
     ("Listar tus notas", "Decime 'mis notas' o 'qué notas tengo' y te las muestro."),
-    ("Charlar conmigo", "Cualquier otra cosa que me digas, te respondo usando el LLM."),
+    ("Charlar conmigo", "Si la consulta aporta contexto o contenido, te respondo usando el LLM."),
+    ("Fuera de alcance", "Clima, noticias o datos en tiempo real se responden sin gastar LLM."),
 ]
 
 
@@ -61,6 +110,25 @@ def generar_ayuda() -> str:
     )
 
 
+def _normalizar_mensaje(mensaje: str) -> str:
+    texto = mensaje.strip().lower()
+    texto = re.sub(r"[¡!¿?.,;:]+", "", texto)
+    texto = re.sub(r"\s+", " ", texto)
+    return texto
+
+
+def _es_mensaje_trivial(mensaje: str) -> bool:
+    texto = _normalizar_mensaje(mensaje)
+    return texto in _SALUDOS_SIMPLES or texto in _CONFIRMACIONES_SIMPLES
+
+
+def _respuesta_trivial(mensaje: str) -> str:
+    texto = _normalizar_mensaje(mensaje)
+    if texto in _SALUDOS_SIMPLES:
+        return "Hola. Puedo ayudarte con tus notas, memoria o ideas."
+    return "Perfecto."
+
+
 @dataclass
 class IntentResult:
     intent: str
@@ -71,6 +139,9 @@ class IntentResult:
 
 def route_intent(mensaje: str) -> IntentResult:
     """Clasifica el mensaje en una intención. Prioridad: primer patrón que matchee."""
+    if _es_mensaje_trivial(mensaje):
+        return IntentResult("TRIVIAL", payload=_respuesta_trivial(mensaje))
+
     if _PATRON_AYUDA.search(mensaje):
         return IntentResult("HELP")
 
@@ -87,10 +158,17 @@ def route_intent(mensaje: str) -> IntentResult:
 
     match_buscar = _PATRON_BUSCAR.search(mensaje)
     if match_buscar:
-        return IntentResult("SEARCH_NOTES", payload=match_buscar.group(1).strip())
+        query = next(group for group in match_buscar.groups() if group)
+        return IntentResult("SEARCH_NOTES", payload=query.strip())
 
     if detectar_solicitud_listar_notas(mensaje):
         return IntentResult("LIST_NOTES")
+
+    if _PATRON_HERRAMIENTA_EXTERNA.search(mensaje):
+        return IntentResult("NEEDS_EXTERNAL_TOOL", payload=_RESPUESTA_HERRAMIENTA_EXTERNA)
+
+    if _PATRON_FUERA_DE_ALCANCE.search(mensaje):
+        return IntentResult("OUT_OF_SCOPE", payload=_RESPUESTA_FUERA_DE_ALCANCE)
 
     return IntentResult("CHAT", payload=mensaje, needs_llm=True)
 
@@ -102,6 +180,9 @@ def resolver_mensaje(chat_id: int, mensaje: str) -> str:
 
     if resultado.intent == "HELP":
         return generar_ayuda()
+
+    if resultado.intent in {"TRIVIAL", "OUT_OF_SCOPE", "NEEDS_EXTERNAL_TOOL"}:
+        return resultado.payload
 
     if resultado.intent == "SAVE_MEMORY":
         guardar_memoria(resultado.payload)

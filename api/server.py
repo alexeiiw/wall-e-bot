@@ -2,6 +2,8 @@
 FastAPI server que expone el LLM y funcionalidades del chat privado de WALL-E.
 Endpoints:
 - GET / -> Info del API
+- GET /health -> Health check
+- GET /api/v1/health -> Health check versionado
 - POST /api/v1/chat/send -> Enviar mensaje y obtener respuesta
 - GET /api/v1/chat/history -> Obtener historial de últimos 5 mensajes
 """
@@ -23,7 +25,7 @@ from api.auth import verify_bearer_token, validate_message_length
 app = FastAPI(
     title="WALL-E Backend API",
     description="API REST para acceder al chat privado con IA local (Ollama)",
-    version="1.0.0"
+    version="1.2.0"
 )
 
 
@@ -62,7 +64,7 @@ async def root():
     """
     return {
         "name": "WALL-E Backend API",
-        "version": "1.0.0",
+        "version": "1.2.0",
         "status": "running",
         "description": "API REST para chat privado con IA local"
     }
@@ -71,6 +73,12 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check. No requiere autenticación."""
+    return {"status": "ok"}
+
+
+@app.get("/api/v1/health")
+async def versioned_health_check():
+    """Health check versionado. No requiere autenticación."""
     return {"status": "ok"}
 
 

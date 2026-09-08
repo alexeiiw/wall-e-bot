@@ -1,11 +1,11 @@
-# WALL-E Bot (v1.1)
+# WALL-E Bot (v1.2)
 
 Bot de Telegram con IA local (Ollama) pensado para vivir dentro de un Codespace,
 sin persistencia en git y de uso 100% por lenguaje natural (sin comandos `/algo`).
 
-Desde **v1.1**, incluye un **Backend REST API** para consumir el chat desde cualquier cliente.
+Desde **v1.1**, incluye un **Backend REST API** para consumir el chat desde cualquier cliente. Desde **v1.2**, incluye instalador para Codespaces/Linux.
 
-## Qué hace hoy (v1.1)
+## Qué hace hoy (v1.2)
 
 ### Bot de Telegram + Backend API
 - Cada mensaje pasa primero por un **router de intención determinista**
@@ -26,7 +26,15 @@ Desde **v1.1**, incluye un **Backend REST API** para consumir el chat desde cual
   - `GET /api/v1/chat/history` - Obtener historial de últimos 5 mensajes
   - `GET /` - Info del API
   - `GET /health` - Health check
+  - `GET /api/v1/health` - Health check versionado
 - Ver documentación completa en [api/README.md](api/README.md).
+
+### Instalador Codespaces/Linux (NUEVO en v1.2)
+- Prepara los archivos locales no versionados: `.env`, `memory/memory.md` y `notas/notas_e_ideas.md`.
+- No sobrescribe archivos existentes para evitar perder secretos, memoria o notas personales.
+- Instala dependencias Python desde `requirements.txt`.
+- Verifica si Ollama esta instalado; si falta, usa el instalador oficial.
+- Verifica y descarga el modelo definido en `.env`, usando `qwen2.5:1.5b` como valor por defecto.
 
 ## Por qué no usa comandos
 
@@ -98,6 +106,8 @@ Esto mantiene el proyecto creciendo de forma incremental y documentada, comando 
 ├── .env.example          # plantilla sin secretos
 ├── main.py               # punto de entrada, arranca Telegram bot + API REST
 ├── requirements.txt
+├── scripts/
+│   └── install.sh        # instalador para Codespaces/Linux
 ├── bot/
 │   ├── config.py         # carga variables de entorno
 │   ├── handlers.py       # handler de mensajes de Telegram (llama a intent_router)
@@ -107,7 +117,7 @@ Esto mantiene el proyecto creciendo de forma incremental y documentada, comando 
 │   ├── memory_trigger.py # detección de frases: recordar, anotar, listar notas
 │   ├── tools.py          # guardar_memoria()
 │   └── notes.py          # guardar_nota(), cargar_notas(), buscar_notas()
-├── api/                  # Backend REST API (NUEVO en v1.1)
+├── api/                  # Backend REST API
 │   ├── server.py         # FastAPI app + endpoints
 │   ├── auth.py           # Middleware de autenticación Bearer Token
 │   ├── README.md         # Documentación detallada de endpoints
@@ -120,7 +130,17 @@ Esto mantiene el proyecto creciendo de forma incremental y documentada, comando 
 
 ## Cómo correrlo
 
-### Instalación de dependencias
+### Instalacion recomendada en Codespaces/Linux
+
+Ejecuta el instalador:
+
+```bash
+bash scripts/install.sh
+```
+
+El instalador crea los archivos locales si faltan, instala dependencias, prepara Ollama y descarga el modelo configurado. Despues edita `.env` y completa `TELEGRAM_TOKEN` y `BACKEND_SECRET_KEY`.
+
+### Instalación manual de dependencias
 ```bash
 pip install -r requirements.txt
 ```
@@ -157,6 +177,13 @@ Esto iniciará:
 **Requisitos previos:**
 - Ollama corriendo localmente con el modelo definido en `.env`
 - Token válido de Telegram Bot (obtén uno en @BotFather)
+
+## Cambios por version
+
+| Version | Cambios principales |
+|---|---|
+| v1.2 | Agrega `scripts/install.sh`, prepara archivos locales ignorados por Git, instala dependencias, verifica Ollama, descarga el modelo local y expone `/api/v1/health` |
+| v1.1 | Agrega Backend REST API compartiendo el mismo router de intencion del bot de Telegram |
 
 ## Acceder al API
 

@@ -1,12 +1,14 @@
 # WALL-E Backend API
 
+Version: `1.2.0`
+
 ## Descripción
 
 API REST que expone el chat privado con IA local (Ollama) del bot WALL-E. Permite enviar mensajes y obtener respuestas desde cualquier cliente, no solo desde Telegram.
 
 ## Autenticación
 
-Todos los endpoints (excepto `/` y `/health`) requieren autenticación Bearer Token:
+Todos los endpoints (excepto `/`, `/health` y `/api/v1/health`) requieren autenticación Bearer Token:
 
 ```
 Authorization: Bearer <BACKEND_SECRET_KEY>
@@ -29,7 +31,7 @@ Información del API.
 ```json
 {
   "name": "WALL-E Backend API",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "status": "running",
   "description": "API REST para chat privado con IA local"
 }
@@ -40,6 +42,21 @@ Información del API.
 ### `GET /health`
 
 Health check del servidor.
+
+**Autenticación:** No requerida
+
+**Response:**
+```json
+{
+  "status": "ok"
+}
+```
+
+---
+
+### `GET /api/v1/health`
+
+Health check versionado. Es equivalente a `/health`.
 
 **Autenticación:** No requerida
 
@@ -129,6 +146,11 @@ Authorization: Bearer <BACKEND_SECRET_KEY>
 #### GET /
 ```bash
 curl http://localhost:8000/
+```
+
+#### GET /api/v1/health
+```bash
+curl http://localhost:8000/api/v1/health
 ```
 
 #### POST /api/v1/chat/send
@@ -224,3 +246,8 @@ fetch(`${BASE_URL}/api/v1/chat/history`, {
 3. **Límite de mensajes**: Máximo 5000 caracteres por mensaje. Mensajes más largos serán rechazados.
 
 4. **Token compartido**: La misma cadena `BACKEND_SECRET_KEY` se usa para todos los clientes. Para múltiples usuarios en producción, considera implementar API Keys por usuario.
+
+## Cambios v1.2
+
+- Se agrega `GET /api/v1/health` como health check versionado.
+- Se mantiene `GET /health` para chequeos simples de infraestructura.

@@ -1,6 +1,6 @@
 # WALL-E Backend API
 
-Version: `1.3.1`
+Version: `1.3.2`
 
 ## Descripción
 
@@ -31,7 +31,7 @@ Información del API.
 ```json
 {
   "name": "WALL-E Backend API",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "status": "running",
   "description": "API REST para chat privado con IA local"
 }
@@ -252,6 +252,14 @@ fetch(`${BASE_URL}/api/v1/chat/history`, {
    - `[WALL-E / proxy local + IA local]`: consulta externa o de tiempo real respondida con LLM bajo restricción.
    - `[WALL-E / IA local no respondió]`: Ollama rechazó responder directamente.
    - `[WALL-E / error IA local]`: fallo técnico al invocar Ollama.
+
+6. **Negativas falsas del LLM**: Para consultas seguras de bienestar, el cliente IA reintenta con una instrucción más específica antes de mostrar `[WALL-E / IA local no respondió]`. Si aun así hay rechazo, esa negativa no se guarda como respuesta del asistente en el historial.
+
+## Cambios v1.3.2
+
+- Se mejora el prompt base del LLM para consultas educativas de bienestar y salud general.
+- Se agrega reintento seguro para negativas falsas en temas permitidos como rendimiento sexual, sueño, estrés o hábitos.
+- Las negativas normalizadas del LLM ya no se guardan como respuesta del asistente en el historial conversacional.
 
 ## Cambios v1.3.1
 

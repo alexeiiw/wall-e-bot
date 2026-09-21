@@ -1,6 +1,6 @@
 # WALL-E Backend API
 
-Version: `1.2.0`
+Version: `1.3.0`
 
 ## Descripción
 
@@ -31,7 +31,7 @@ Información del API.
 ```json
 {
   "name": "WALL-E Backend API",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "status": "running",
   "description": "API REST para chat privado con IA local"
 }
@@ -107,7 +107,7 @@ Content-Type: application/json
 
 ### `GET /api/v1/chat/history`
 
-Obtiene el historial de últimos 5 mensajes.
+Obtiene el historial de últimos 20 mensajes en memoria.
 
 **Autenticación:** Requerida
 
@@ -236,18 +236,32 @@ fetch(`${BASE_URL}/api/v1/chat/history`, {
 
 ## Notas Importantes
 
-1. **Chat ID único**: Todos los requests desde la API usan el mismo `chat_id` (999999 internamente), por lo que comparten el mismo historial de 5 últimos mensajes.
+1. **Chat ID único**: Todos los requests desde la API usan el mismo `chat_id` (999999 internamente), por lo que comparten el mismo historial de 20 últimos mensajes.
 
 2. **Contexto de memoria**: Cada respuesta tiene acceso a:
    - Contexto en `memory/memory.md` (quién es el usuario, personalidad del bot)
    - Contexto en `notas/notas_e_ideas.md` (notas e ideas anotadas)
-   - Últimos 5 mensajes del historial
+   - Últimos 20 mensajes del historial en memoria
 
 3. **Límite de mensajes**: Máximo 5000 caracteres por mensaje. Mensajes más largos serán rechazados.
 
 4. **Token compartido**: La misma cadena `BACKEND_SECRET_KEY` se usa para todos los clientes. Para múltiples usuarios en producción, considera implementar API Keys por usuario.
 
+5. **Origen de respuestas especiales**: Las respuestas normales no llevan etiqueta. Los bloqueos o incidencias sí:
+   - `[WALL-E / seguridad local]`: solicitud peligrosa bloqueada por el proxy del proyecto.
+   - `[WALL-E / proxy local + IA local]`: consulta externa o de tiempo real respondida con LLM bajo restricción.
+   - `[WALL-E / IA local no respondió]`: Ollama rechazó responder directamente.
+   - `[WALL-E / error IA local]`: fallo técnico al invocar Ollama.
+
 ## Cambios v1.2
 
 - Se agrega `GET /api/v1/health` como health check versionado.
 - Se mantiene `GET /health` para chequeos simples de infraestructura.
+
+## Cambios v1.3.0
+
+- La version se centraliza en `bot/version.py`.
+- El historial conversacional en memoria aumenta de 5 a 20 mensajes.
+- Las consultas sobre datos externos o herramientas no integradas pasan a bloqueo suave: pueden recibir explicacion general con LLM, pero sin simular acceso externo.
+- Se agrega seguridad local para bloquear solicitudes peligrosas antes de llamar al LLM.
+- Se detectan negativas del LLM para mostrar un mensaje claro cuando el modelo no responde directamente.

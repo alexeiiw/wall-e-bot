@@ -4,6 +4,7 @@ from telegram.ext import Application, MessageHandler, filters
 
 from bot.config import TELEGRAM_TOKEN
 from bot.handlers import responder_con_ia
+from bot.version import APP_VERSION
 from api.server import app as fastapi_app
 
 
@@ -17,7 +18,7 @@ def run_fastapi_server():
 
 def main():
     print("=" * 60)
-    print("WALL-E Bot v1.1 - Iniciando servicios")
+    print(f"WALL-E Bot v{APP_VERSION} - Iniciando servicios")
     print("=" * 60)
     
     # Thread para FastAPI Server (en background)

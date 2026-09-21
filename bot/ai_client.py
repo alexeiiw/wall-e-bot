@@ -1,8 +1,32 @@
 import os
+import re
 import ollama
 
 from bot.config import OLLAMA_MODEL, MEMORY_PATH, NOTES_PATH
 from bot.history import agregar_mensaje, obtener_historial
+
+
+_PATRON_NEGATIVA_LLM = re.compile(
+    r"\b(?:no\s+puedo\s+(?:ayudarte|proporcionar|cumplir|asistir)|"
+    r"no\s+debo\s+ayudar|no\s+estoy\s+(?:autorizado|capacitado)|"
+    r"lo\s+siento[^\n]{0,80}no\s+puedo|"
+    r"i\s+(?:can't|cannot)\s+(?:assist|help|provide|comply))\b",
+    re.IGNORECASE,
+)
+
+
+def _respuesta_error_ia(error: Exception) -> str:
+    return f"[WALL-E / error IA local]\nNo pude conectar con Ollama o generar la respuesta: {error}"
+
+
+def _normalizar_respuesta_llm(respuesta: str) -> str:
+    if _PATRON_NEGATIVA_LLM.search(respuesta):
+        return (
+            "[WALL-E / IA local no respondió]\n"
+            "El modelo rechazó responder directamente esa solicitud. "
+            "Puedo ayudarte a reformularla hacia una explicación segura, educativa o conceptual."
+        )
+    return respuesta
 
 
 def cargar_memoria():
@@ -36,9 +60,9 @@ def generar_respuesta(chat_id: int, mensaje_usuario: str) -> str:
     ]
     try:
         response = ollama.chat(model=OLLAMA_MODEL, messages=messages)
-        respuesta_ia = response['message']['content']
+        respuesta_ia = _normalizar_respuesta_llm(response['message']['content'])
     except Exception as e:
-        return f"Error al conectar con la IA local: {e}"
+        return _respuesta_error_ia(e)
 
     agregar_mensaje(chat_id, 'user', mensaje_usuario)
     agregar_mensaje(chat_id, 'assistant', respuesta_ia)
@@ -53,7 +77,7 @@ def resumir_texto(instruccion: str, texto: str) -> str:
     ]
     try:
         response = ollama.chat(model=OLLAMA_MODEL, messages=messages)
-        return response['message']['content']
+        return _normalizar_respuesta_llm(response['message']['content'])
     except Exception as e:
-        return f"Error al conectar con la IA local: {e}"
+        return _respuesta_error_ia(e)
 

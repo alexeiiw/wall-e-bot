@@ -5,7 +5,7 @@ Endpoints:
 - GET /health -> Health check
 - GET /api/v1/health -> Health check versionado
 - POST /api/v1/chat/send -> Enviar mensaje y obtener respuesta
-- GET /api/v1/chat/history -> Obtener historial de últimos 5 mensajes
+- GET /api/v1/chat/history -> Obtener historial de últimos 20 mensajes
 """
 
 from fastapi import FastAPI, HTTPException, Depends
@@ -19,13 +19,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from bot.intent_router import resolver_mensaje
 from bot.history import obtener_historial
+from bot.version import APP_VERSION
 from api.auth import verify_bearer_token, validate_message_length
 
 
 app = FastAPI(
     title="WALL-E Backend API",
     description="API REST para acceder al chat privado con IA local (Ollama)",
-    version="1.2.0"
+    version=APP_VERSION
 )
 
 
@@ -64,7 +65,7 @@ async def root():
     """
     return {
         "name": "WALL-E Backend API",
-        "version": "1.2.0",
+        "version": APP_VERSION,
         "status": "running",
         "description": "API REST para chat privado con IA local"
     }
@@ -120,12 +121,12 @@ async def send_message(request: MessageRequest, token = Depends(verify_bearer_to
 @app.get("/api/v1/chat/history", response_model=HistoryResponse)
 async def get_history(token = Depends(verify_bearer_token)):
     """
-    Endpoint para obtener el historial de últimos 5 mensajes.
+    Endpoint para obtener el historial de últimos 20 mensajes.
     
     Requiere: Authorization: Bearer <BACKEND_SECRET_KEY>
     
     Returns:
-        { "status": "ok", "history": [...últimos 5 mensajes...] }
+        { "status": "ok", "history": [...últimos 20 mensajes...] }
     """
     try:
         # Obtener historial del chat_id especial "api"

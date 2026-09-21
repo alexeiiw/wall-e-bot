@@ -1,6 +1,6 @@
 from collections import defaultdict, deque
 
-MAX_MENSAJES = 5
+MAX_MENSAJES = 20
 
 # Historial en memoria (se pierde al reiniciar el bot), por chat_id
 _historial = defaultdict(lambda: deque(maxlen=MAX_MENSAJES))

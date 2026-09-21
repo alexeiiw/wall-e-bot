@@ -53,6 +53,16 @@ _PATRON_HERRAMIENTA_EXTERNA = re.compile(
     re.IGNORECASE
 )
 
+_PATRON_SOLICITUD_PELIGROSA = re.compile(
+    r"\b(?:"
+    r"(?:fabricar|hacer|construir|crear|armar|preparar)\s+(?:una\s+)?(?:bomba|explosivo|arma)|"
+    r"bomba\s+(?:nuclear|casera|molotov)|explosivos?|armas?\s+(?:quimicas|biologicas|nucleares)|"
+    r"(?:hackear|robar|extraer)\s+(?:credenciales|contraseñas|passwords|tokens)|"
+    r"malware|ransomware|keylogger|phishing|evadir\s+seguridad|bypass\s+seguridad"
+    r")\b",
+    re.IGNORECASE,
+)
+
 _SALUDOS_SIMPLES = {
     "hola",
     "buenas",
@@ -79,12 +89,19 @@ _CONFIRMACIONES_SIMPLES = {
 
 _RESPUESTA_FUERA_DE_ALCANCE = (
     "No tengo acceso a datos externos o en tiempo real desde aquí. "
-    "Puedo ayudarte con tus notas, memoria y tareas personales guardadas."
+    "Si la pregunta se puede responder de forma conceptual o general, responderé sin inventar datos actuales."
 )
 
 _RESPUESTA_HERRAMIENTA_EXTERNA = (
     "Todavía no tengo integrada esa herramienta externa. "
-    "Puedo trabajar con tu memoria y tus notas locales."
+    "Puedo ayudarte con criterios, pasos o alternativas sin simular que usé esa herramienta."
+)
+
+_RESPUESTA_SOLICITUD_PELIGROSA = (
+    "[WALL-E / seguridad local]\n"
+    "No puedo ayudar con instrucciones para fabricar armas, causar daño, robar credenciales, "
+    "crear malware o evadir sistemas de seguridad. Sí puedo ayudarte con una explicación segura, "
+    "histórica, ética, defensiva o educativa del tema."
 )
 
 # Lista de comandos disponibles, para el breef de ayuda. Se va sumando una
@@ -96,7 +113,8 @@ COMANDOS_DISPONIBLES = [
     ("Buscar en tus notas", "Decime 'busca en mis notas sobre...' y te muestro lo que encuentre."),
     ("Listar tus notas", "Decime 'mis notas' o 'qué notas tengo' y te las muestro."),
     ("Charlar conmigo", "Si la consulta aporta contexto o contenido, te respondo usando el LLM."),
-    ("Fuera de alcance", "Clima, noticias o datos en tiempo real se responden sin gastar LLM."),
+    ("Seguridad local", "Solicitudes peligrosas se bloquean antes de llegar al LLM."),
+    ("Bloqueo suave", "Clima, noticias, web o herramientas externas pueden recibir explicación general con advertencia."),
 ]
 
 
@@ -145,6 +163,9 @@ def route_intent(mensaje: str) -> IntentResult:
     if _PATRON_AYUDA.search(mensaje):
         return IntentResult("HELP")
 
+    if _PATRON_SOLICITUD_PELIGROSA.search(mensaje):
+        return IntentResult("SAFETY_DANGEROUS_REQUEST", payload=_RESPUESTA_SOLICITUD_PELIGROSA)
+
     dato = detectar_dato_a_recordar(mensaje)
     if dato:
         return IntentResult("SAVE_MEMORY", payload=dato)
@@ -181,8 +202,24 @@ def resolver_mensaje(chat_id: int, mensaje: str) -> str:
     if resultado.intent == "HELP":
         return generar_ayuda()
 
-    if resultado.intent in {"TRIVIAL", "OUT_OF_SCOPE", "NEEDS_EXTERNAL_TOOL"}:
+    if resultado.intent == "TRIVIAL":
         return resultado.payload
+
+    if resultado.intent == "SAFETY_DANGEROUS_REQUEST":
+        return resultado.payload
+
+    if resultado.intent in {"OUT_OF_SCOPE", "NEEDS_EXTERNAL_TOOL"}:
+        respuesta = generar_respuesta(
+            chat_id,
+            (
+                f"{resultado.payload}\n\n"
+                f"Pregunta original del usuario: {mensaje}\n\n"
+                "Responde de forma útil solo si puedes hacerlo sin datos en tiempo real, "
+                "sin afirmar que consultaste internet, correo, calendario, APIs u otras herramientas externas. "
+                "Si hace falta información actual o acceso externo, dilo con claridad y ofrece una alternativa práctica."
+            )
+        )
+        return f"[WALL-E / proxy local + IA local]\n{respuesta}"
 
     if resultado.intent == "SAVE_MEMORY":
         guardar_memoria(resultado.payload)

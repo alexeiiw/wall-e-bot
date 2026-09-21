@@ -1,11 +1,11 @@
-# WALL-E Bot (v1.2)
+# WALL-E Bot (v1.3.0)
 
 Bot de Telegram con IA local (Ollama) pensado para vivir dentro de un Codespace,
 sin persistencia en git y de uso 100% por lenguaje natural (sin comandos `/algo`).
 
-Desde **v1.1**, incluye un **Backend REST API** para consumir el chat desde cualquier cliente. Desde **v1.2**, incluye instalador para Codespaces/Linux.
+Desde **v1.1**, incluye un **Backend REST API** para consumir el chat desde cualquier cliente. Desde **v1.2**, incluye instalador para Codespaces/Linux. Desde **v1.3.0**, el router aplica bloqueo suave para consultas externas, bloquea solicitudes peligrosas con seguridad local, detecta negativas del LLM y mantiene un historial corto de 20 mensajes por conversación.
 
-## Qué hace hoy (v1.2)
+## Qué hace hoy (v1.3.0)
 
 ### Bot de Telegram + Backend API
 - Cada mensaje pasa primero por un **router de intención determinista**
@@ -14,16 +14,25 @@ Desde **v1.1**, incluye un **Backend REST API** para consumir el chat desde cual
 - Mismo router para Telegram y para el backend API: un mensaje se comporta igual sin importar el canal.
 - Usa [memory/memory.md](memory/memory.md) como base de conocimiento fija (quién es el
   usuario, personalidad del bot, reglas de estilo).
-- Mantiene un historial corto en memoria (últimos 5 mensajes por chat, se pierde al
+- Mantiene un historial corto en memoria (últimos 20 mensajes por chat, se pierde al
   reiniciar el bot) para dar continuidad dentro de una misma conversación.
 - Ver [Comandos actuales](#comandos-actuales) para el detalle de cada intención.
+
+### Respuestas con origen claro (NUEVO en v1.3.0)
+
+Las respuestas normales del LLM no se etiquetan para mantener el chat natural. Los casos especiales sí muestran su origen:
+
+- `[WALL-E / seguridad local]`: el proxy del proyecto bloqueó una solicitud peligrosa antes de llamar al LLM.
+- `[WALL-E / proxy local + IA local]`: el proxy detectó datos externos, tiempo real o herramientas no integradas, pero permitió una respuesta general con restricciones.
+- `[WALL-E / IA local no respondió]`: la pregunta llegó al LLM, pero el modelo rechazó responder directamente.
+- `[WALL-E / error IA local]`: hubo un problema técnico al llamar a Ollama.
 
 ### Backend REST API (NUEVO en v1.1)
 - Expone los servicios del chat a través de HTTP REST.
 - Autenticación por Bearer Token compartido (`BACKEND_SECRET_KEY` en `.env`).
 - Endpoints:
   - `POST /api/v1/chat/send` - Enviar mensaje y obtener respuesta
-  - `GET /api/v1/chat/history` - Obtener historial de últimos 5 mensajes
+  - `GET /api/v1/chat/history` - Obtener historial de últimos 20 mensajes
   - `GET /` - Info del API
   - `GET /health` - Health check
   - `GET /api/v1/health` - Health check versionado
@@ -62,13 +71,16 @@ Si ninguno matchea, cae a `CHAT`.
 | 5 | `SUMMARIZE_NOTES` | "resumime mis notas", "hazme un resumen de mis ideas" | Sí |
 | 6 | `SEARCH_NOTES` | "busca en mis notas sobre...", "qué tengo sobre...", "revisa en mis notas de..." | Solo si hay más de 3 resultados |
 | 7 | `LIST_NOTES` | "dime", "muéstrame", "qué notas tengo", "mis notas", "mis ideas" | No |
-| 8 | `NEEDS_EXTERNAL_TOOL` | "busca en internet...", "googlea...", "consulta web..." | No |
-| 9 | `OUT_OF_SCOPE` | "qué clima hace", "noticias", "precio actual..." | No |
-| 10 | `CHAT` | conversación general con contexto suficiente | Sí |
+| 8 | `SAFETY_DANGEROUS_REQUEST` | "cómo fabricar una bomba...", "crear malware..." | No |
+| 9 | `NEEDS_EXTERNAL_TOOL` | "busca en internet...", "googlea...", "consulta web..." | Sí, con restricción |
+| 10 | `OUT_OF_SCOPE` | "qué clima hace", "noticias", "precio actual..." | Sí, con restricción |
+| 11 | `CHAT` | conversación general con contexto suficiente | Sí |
 
 `CHAT` ya no es un fallback universal para todo: antes de llamar al LLM, el router
-descarta saludos, confirmaciones, herramientas externas no integradas y consultas
-de datos externos o en tiempo real.
+descarta saludos, confirmaciones, acciones locales y solicitudes peligrosas. Las herramientas externas no
+integradas y las consultas de datos externos o en tiempo real pasan por un bloqueo
+suave: el LLM puede responder con explicaciones generales, criterios o alternativas,
+pero debe aclarar que no consultó internet, calendario, correo, APIs ni datos actuales.
 
 `HELP` responde con un breef de qué puede hacer WALL-E hoy y qué modelo de Ollama
 tiene instalado (`bot/intent_router.py` -> `COMANDOS_DISPONIBLES`). Se actualiza
@@ -113,7 +125,8 @@ Esto mantiene el proyecto creciendo de forma incremental y documentada, comando 
 │   ├── handlers.py       # handler de mensajes de Telegram (llama a intent_router)
 │   ├── intent_router.py  # router de intención: clasifica el mensaje y decide la respuesta
 │   ├── ai_client.py      # llamada a Ollama + memoria + notas + historial
-│   ├── history.py        # historial corto en memoria (últimos 5 mensajes)
+│   ├── history.py        # historial corto en memoria (últimos 20 mensajes)
+│   ├── version.py        # version unica de la aplicacion
 │   ├── memory_trigger.py # detección de frases: recordar, anotar, listar notas
 │   ├── tools.py          # guardar_memoria()
 │   └── notes.py          # guardar_nota(), cargar_notas(), buscar_notas()
@@ -182,6 +195,7 @@ Esto iniciará:
 
 | Version | Cambios principales |
 |---|---|
+| v1.3.0 | Unifica versionado, cambia default local a `qwen2.5:1.5b`, aplica bloqueo suave para consultas externas, agrega seguridad local para solicitudes peligrosas, detecta negativas del LLM y amplía el historial en memoria a 20 mensajes |
 | v1.2 | Agrega `scripts/install.sh`, prepara archivos locales ignorados por Git, instala dependencias, verifica Ollama, descarga el modelo local y expone `/api/v1/health` |
 | v1.1 | Agrega Backend REST API compartiendo el mismo router de intencion del bot de Telegram |
 

@@ -1,6 +1,6 @@
 # WALL-E Backend API
 
-Version: `1.3.0`
+Version: `1.3.1`
 
 ## Descripción
 
@@ -31,7 +31,7 @@ Información del API.
 ```json
 {
   "name": "WALL-E Backend API",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "status": "running",
   "description": "API REST para chat privado con IA local"
 }
@@ -253,10 +253,10 @@ fetch(`${BASE_URL}/api/v1/chat/history`, {
    - `[WALL-E / IA local no respondió]`: Ollama rechazó responder directamente.
    - `[WALL-E / error IA local]`: fallo técnico al invocar Ollama.
 
-## Cambios v1.2
+## Cambios v1.3.1
 
-- Se agrega `GET /api/v1/health` como health check versionado.
-- Se mantiene `GET /health` para chequeos simples de infraestructura.
+- Se integra y ordena la documentación del API con el README principal.
+- Se alinea la version documentada con `bot/version.py`.
 
 ## Cambios v1.3.0
 
@@ -265,3 +265,8 @@ fetch(`${BASE_URL}/api/v1/chat/history`, {
 - Las consultas sobre datos externos o herramientas no integradas pasan a bloqueo suave: pueden recibir explicacion general con LLM, pero sin simular acceso externo.
 - Se agrega seguridad local para bloquear solicitudes peligrosas antes de llamar al LLM.
 - Se detectan negativas del LLM para mostrar un mensaje claro cuando el modelo no responde directamente.
+
+## Cambios v1.2
+
+- Se agrega `GET /api/v1/health` como health check versionado.
+- Se mantiene `GET /health` para chequeos simples de infraestructura.

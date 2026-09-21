@@ -1,11 +1,11 @@
-# WALL-E Bot (v1.3.0)
+# WALL-E Bot (v1.3.1)
 
 Bot de Telegram con IA local (Ollama) pensado para vivir dentro de un Codespace,
 sin persistencia en git y de uso 100% por lenguaje natural (sin comandos `/algo`).
 
-Desde **v1.1**, incluye un **Backend REST API** para consumir el chat desde cualquier cliente. Desde **v1.2**, incluye instalador para Codespaces/Linux. Desde **v1.3.0**, el router aplica bloqueo suave para consultas externas, bloquea solicitudes peligrosas con seguridad local, detecta negativas del LLM y mantiene un historial corto de 20 mensajes por conversación.
+Desde **v1.1**, incluye un **Backend REST API** para consumir el chat desde cualquier cliente. Desde **v1.2**, incluye instalador para Codespaces/Linux. Desde **v1.3.0**, el router aplica bloqueo suave para consultas externas, bloquea solicitudes peligrosas con seguridad local, detecta negativas del LLM y mantiene un historial corto de 20 mensajes por conversación. Desde **v1.3.1**, la documentación queda integrada y alineada con la versión central del proyecto.
 
-## Qué hace hoy (v1.3.0)
+## Qué hace hoy (v1.3.1)
 
 ### Bot de Telegram + Backend API
 - Cada mensaje pasa primero por un **router de intención determinista**
@@ -195,6 +195,7 @@ Esto iniciará:
 
 | Version | Cambios principales |
 |---|---|
+| v1.3.1 | Integra y ordena la documentación del README principal y del Backend API, alineando referencias de versión |
 | v1.3.0 | Unifica versionado, cambia default local a `qwen2.5:1.5b`, aplica bloqueo suave para consultas externas, agrega seguridad local para solicitudes peligrosas, detecta negativas del LLM y amplía el historial en memoria a 20 mensajes |
 | v1.2 | Agrega `scripts/install.sh`, prepara archivos locales ignorados por Git, instala dependencias, verifica Ollama, descarga el modelo local y expone `/api/v1/health` |
 | v1.1 | Agrega Backend REST API compartiendo el mismo router de intencion del bot de Telegram |

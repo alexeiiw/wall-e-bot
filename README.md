@@ -1,11 +1,11 @@
-# WALL-E Bot (v1.3.2)
+# WALL-E Bot (v1.3.3)
 
 Bot de Telegram con IA local (Ollama) pensado para vivir dentro de un Codespace,
 sin persistencia en git y de uso 100% por lenguaje natural (sin comandos `/algo`).
 
-Desde **v1.1**, incluye un **Backend REST API** para consumir el chat desde cualquier cliente. Desde **v1.2**, incluye instalador para Codespaces/Linux. Desde **v1.3.0**, el router aplica bloqueo suave para consultas externas, bloquea solicitudes peligrosas con seguridad local, detecta negativas del LLM y mantiene un historial corto de 20 mensajes por conversación. Desde **v1.3.2**, reduce negativas falsas del LLM en consultas seguras de bienestar y evita que los rechazos contaminen el historial.
+Desde **v1.1**, incluye un **Backend REST API** para consumir el chat desde cualquier cliente. Desde **v1.2**, incluye instalador para Codespaces/Linux. Desde **v1.3.0**, el router aplica bloqueo suave para consultas externas, bloquea solicitudes peligrosas con seguridad local, detecta negativas del LLM y mantiene historial conversacional. Desde **v1.3.3**, agrega `reset chat`, reduce el historial a 10 mensajes y permite guardar la última respuesta útil en notas.
 
-## Qué hace hoy (v1.3.2)
+## Qué hace hoy (v1.3.3)
 
 ### Bot de Telegram + Backend API
 - Cada mensaje pasa primero por un **router de intención determinista**
@@ -14,10 +14,12 @@ Desde **v1.1**, incluye un **Backend REST API** para consumir el chat desde cual
 - Mismo router para Telegram y para el backend API: un mensaje se comporta igual sin importar el canal.
 - Usa [memory/memory.md](memory/memory.md) como base de conocimiento fija (quién es el
   usuario, personalidad del bot, reglas de estilo).
-- Mantiene un historial corto en memoria (últimos 20 mensajes por chat, se pierde al
+- Mantiene un historial corto en memoria (últimos 10 mensajes por chat, se pierde al
   reiniciar el bot) para dar continuidad dentro de una misma conversación.
 - Reintenta consultas seguras de bienestar si el modelo local las rechaza por exceso
   de cautela, y no guarda negativas normalizadas como respuesta de contexto.
+- Permite `reset chat` para limpiar solo el contexto temporal de la conversación.
+- Permite `guarda esta respuesta` para guardar la última respuesta útil en notas.
 - Ver [Comandos actuales](#comandos-actuales) para el detalle de cada intención.
 
 ### Respuestas con origen claro (NUEVO en v1.3.0)
@@ -34,7 +36,7 @@ Las respuestas normales del LLM no se etiquetan para mantener el chat natural. L
 - Autenticación por Bearer Token compartido (`BACKEND_SECRET_KEY` en `.env`).
 - Endpoints:
   - `POST /api/v1/chat/send` - Enviar mensaje y obtener respuesta
-  - `GET /api/v1/chat/history` - Obtener historial de últimos 20 mensajes
+  - `GET /api/v1/chat/history` - Obtener historial de últimos 10 mensajes
   - `GET /` - Info del API
   - `GET /health` - Health check
   - `GET /api/v1/health` - Health check versionado
@@ -70,13 +72,15 @@ Si ninguno matchea, cae a `CHAT`.
 | 2 | `HELP` | "wally qué puedes hacer", "wally ayuda" | No |
 | 3 | `SAVE_MEMORY` | "recuerda que...", "recordá que...", "acuérdate que...", "no olvides que..." | No |
 | 4 | `SAVE_NOTE` | "anota que...", "anotá que...", "apunta que...", "apúntame que..." | No |
-| 5 | `SUMMARIZE_NOTES` | "resumime mis notas", "hazme un resumen de mis ideas" | Sí |
-| 6 | `SEARCH_NOTES` | "busca en mis notas sobre...", "qué tengo sobre...", "revisa en mis notas de..." | Solo si hay más de 3 resultados |
-| 7 | `LIST_NOTES` | "dime", "muéstrame", "qué notas tengo", "mis notas", "mis ideas" | No |
-| 8 | `SAFETY_DANGEROUS_REQUEST` | "cómo fabricar una bomba...", "crear malware..." | No |
-| 9 | `NEEDS_EXTERNAL_TOOL` | "busca en internet...", "googlea...", "consulta web..." | Sí, con restricción |
-| 10 | `OUT_OF_SCOPE` | "qué clima hace", "noticias", "precio actual..." | Sí, con restricción |
-| 11 | `CHAT` | conversación general con contexto suficiente | Sí |
+| 5 | `SAVE_LAST_RESPONSE` | "guarda esta respuesta", "anota eso", "guarda lo último" | No |
+| 6 | `RESET_CHAT` | "reset chat", "limpia el contexto", "empecemos de cero" | No |
+| 7 | `SUMMARIZE_NOTES` | "resumime mis notas", "hazme un resumen de mis ideas" | Sí |
+| 8 | `SEARCH_NOTES` | "busca en mis notas sobre...", "qué tengo sobre...", "revisa en mis notas de..." | Solo si hay más de 3 resultados |
+| 9 | `LIST_NOTES` | "dime", "muéstrame", "qué notas tengo", "mis notas", "mis ideas" | No |
+| 10 | `SAFETY_DANGEROUS_REQUEST` | "cómo fabricar una bomba...", "crear malware..." | No |
+| 11 | `NEEDS_EXTERNAL_TOOL` | "busca en internet...", "googlea...", "consulta web..." | Sí, con restricción |
+| 12 | `OUT_OF_SCOPE` | "qué clima hace", "noticias", "precio actual..." | Sí, con restricción |
+| 13 | `CHAT` | conversación general con contexto suficiente | Sí |
 
 `CHAT` ya no es un fallback universal para todo: antes de llamar al LLM, el router
 descarta saludos, confirmaciones, acciones locales y solicitudes peligrosas. Las herramientas externas no
@@ -127,7 +131,7 @@ Esto mantiene el proyecto creciendo de forma incremental y documentada, comando 
 │   ├── handlers.py       # handler de mensajes de Telegram (llama a intent_router)
 │   ├── intent_router.py  # router de intención: clasifica el mensaje y decide la respuesta
 │   ├── ai_client.py      # llamada a Ollama + memoria + notas + historial
-│   ├── history.py        # historial corto en memoria (últimos 20 mensajes)
+│   ├── history.py        # historial corto en memoria (últimos 10 mensajes)
 │   ├── version.py        # version unica de la aplicacion
 │   ├── memory_trigger.py # detección de frases: recordar, anotar, listar notas
 │   ├── tools.py          # guardar_memoria()
@@ -197,6 +201,7 @@ Esto iniciará:
 
 | Version | Cambios principales |
 |---|---|
+| v1.3.3 | Agrega `reset chat`, reduce historial temporal a 10 mensajes, mejora continuidad por cambio de tema y permite guardar la última respuesta útil en notas |
 | v1.3.2 | Mejora el prompt del LLM, permite respuestas educativas de bienestar adulto, reintenta negativas falsas y evita guardar rechazos normalizados en historial |
 | v1.3.1 | Integra y ordena la documentación del README principal y del Backend API, alineando referencias de versión |
 | v1.3.0 | Unifica versionado, cambia default local a `qwen2.5:1.5b`, aplica bloqueo suave para consultas externas, agrega seguridad local para solicitudes peligrosas, detecta negativas del LLM y amplía el historial en memoria a 20 mensajes |

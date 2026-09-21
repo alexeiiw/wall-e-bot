@@ -19,6 +19,7 @@ from bot.tools import guardar_memoria
 from bot.notes import guardar_nota, cargar_notas, buscar_notas
 from bot.ai_client import generar_respuesta, resumir_texto
 from bot.config import OLLAMA_MODEL
+from bot.history import limpiar_historial, obtener_ultima_respuesta
 
 # Cantidad máxima de resultados de SEARCH_NOTES que se responden directo,
 # sin pasar por el LLM. Por encima de este número, se resumen con LLM.
@@ -37,6 +38,19 @@ _PATRON_BUSCAR = re.compile(
 
 _PATRON_AYUDA = re.compile(
     r"\bwall[y-]?e?\b.*(?:qu[eé]\s+(?:puedes|pod[eé]s|sabes)\s+hacer|ay[uú]dame|\bayuda\b)",
+    re.IGNORECASE
+)
+
+_PATRON_RESET_CHAT = re.compile(
+    r"\b(?:reset\s+chat|limpia\s+(?:el\s+)?(?:chat|contexto|conversaci[oó]n)|"
+    r"borra\s+(?:el\s+)?(?:chat|contexto|historial)|empecemos\s+de\s+cero|"
+    r"olvida\s+(?:esta\s+)?conversaci[oó]n)\b",
+    re.IGNORECASE
+)
+
+_PATRON_GUARDAR_ULTIMA_RESPUESTA = re.compile(
+    r"\b(?:guarda|guardar|anota|anotar)\s+(?:esta\s+)?(?:respuesta|lo\s+[uú]ltimo|eso)"
+    r"|\b(?:eso\s+me\s+interesa|gu[aá]rdalo|an[oó]talo)\b",
     re.IGNORECASE
 )
 
@@ -104,6 +118,12 @@ _RESPUESTA_SOLICITUD_PELIGROSA = (
     "histórica, ética, defensiva o educativa del tema."
 )
 
+_PREFIJOS_RESPUESTA_NO_GUARDABLE = (
+    "[WALL-E / error IA local]",
+    "[WALL-E / IA local no respondió]",
+    "[WALL-E / seguridad local]",
+)
+
 # Lista de comandos disponibles, para el breef de ayuda. Se va sumando una
 # fila cada vez que se agrega un comando nuevo (ver README -> "Comandos actuales").
 COMANDOS_DISPONIBLES = [
@@ -112,6 +132,8 @@ COMANDOS_DISPONIBLES = [
     ("Resumir tus notas", "Decime 'resumime mis notas' y te doy un resumen con IA."),
     ("Buscar en tus notas", "Decime 'busca en mis notas sobre...' y te muestro lo que encuentre."),
     ("Listar tus notas", "Decime 'mis notas' o 'qué notas tengo' y te las muestro."),
+    ("Guardar última respuesta", "Decime 'guarda esta respuesta' y la guardo en tus notas."),
+    ("Reset chat", "Decime 'reset chat' para limpiar el contexto temporal de esta conversación."),
     ("Charlar conmigo", "Si la consulta aporta contexto o contenido, te respondo usando el LLM."),
     ("Seguridad local", "Solicitudes peligrosas se bloquean antes de llegar al LLM."),
     ("Bloqueo suave", "Clima, noticias, web o herramientas externas pueden recibir explicación general con advertencia."),
@@ -147,6 +169,18 @@ def _respuesta_trivial(mensaje: str) -> str:
     return "Perfecto."
 
 
+def _preparar_respuesta_para_nota(respuesta: str) -> str:
+    texto = re.sub(r"\s+", " ", respuesta).strip()
+    if len(texto) > 1200:
+        texto = texto[:1200].rstrip() + "..."
+    return texto
+
+
+def _es_respuesta_guardable(respuesta: str) -> bool:
+    texto = respuesta.strip()
+    return bool(texto) and not texto.startswith(_PREFIJOS_RESPUESTA_NO_GUARDABLE)
+
+
 @dataclass
 class IntentResult:
     intent: str
@@ -157,6 +191,12 @@ class IntentResult:
 
 def route_intent(mensaje: str) -> IntentResult:
     """Clasifica el mensaje en una intención. Prioridad: primer patrón que matchee."""
+    if _PATRON_RESET_CHAT.search(mensaje):
+        return IntentResult("RESET_CHAT")
+
+    if _PATRON_GUARDAR_ULTIMA_RESPUESTA.search(mensaje):
+        return IntentResult("SAVE_LAST_RESPONSE")
+
     if _es_mensaje_trivial(mensaje):
         return IntentResult("TRIVIAL", payload=_respuesta_trivial(mensaje))
 
@@ -201,6 +241,20 @@ def resolver_mensaje(chat_id: int, mensaje: str) -> str:
 
     if resultado.intent == "HELP":
         return generar_ayuda()
+
+    if resultado.intent == "RESET_CHAT":
+        limpiar_historial(chat_id)
+        return "Listo, limpié el contexto temporal de esta conversación. La memoria permanente y tus notas no se tocaron."
+
+    if resultado.intent == "SAVE_LAST_RESPONSE":
+        ultima_respuesta = obtener_ultima_respuesta(chat_id)
+        if not ultima_respuesta:
+            return "No encontré una respuesta anterior para guardar."
+        if not _es_respuesta_guardable(ultima_respuesta):
+            return "No guardé la última respuesta porque era un error, rechazo o bloqueo local."
+        nota = _preparar_respuesta_para_nota(ultima_respuesta)
+        guardar_nota(f"Respuesta guardada: {nota}")
+        return "Listo, guardé la última respuesta en tus notas."
 
     if resultado.intent == "TRIVIAL":
         return resultado.payload

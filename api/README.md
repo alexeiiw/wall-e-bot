@@ -1,6 +1,6 @@
 # WALL-E Backend API
 
-Version: `1.3.2`
+Version: `1.3.3`
 
 ## Descripción
 
@@ -31,7 +31,7 @@ Información del API.
 ```json
 {
   "name": "WALL-E Backend API",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "status": "running",
   "description": "API REST para chat privado con IA local"
 }
@@ -107,7 +107,7 @@ Content-Type: application/json
 
 ### `GET /api/v1/chat/history`
 
-Obtiene el historial de últimos 20 mensajes en memoria.
+Obtiene el historial de últimos 10 mensajes en memoria.
 
 **Autenticación:** Requerida
 
@@ -236,12 +236,12 @@ fetch(`${BASE_URL}/api/v1/chat/history`, {
 
 ## Notas Importantes
 
-1. **Chat ID único**: Todos los requests desde la API usan el mismo `chat_id` (999999 internamente), por lo que comparten el mismo historial de 20 últimos mensajes.
+1. **Chat ID único**: Todos los requests desde la API usan el mismo `chat_id` (999999 internamente), por lo que comparten el mismo historial de 10 últimos mensajes.
 
 2. **Contexto de memoria**: Cada respuesta tiene acceso a:
    - Contexto en `memory/memory.md` (quién es el usuario, personalidad del bot)
    - Contexto en `notas/notas_e_ideas.md` (notas e ideas anotadas)
-   - Últimos 20 mensajes del historial en memoria
+   - Últimos 10 mensajes del historial en memoria
 
 3. **Límite de mensajes**: Máximo 5000 caracteres por mensaje. Mensajes más largos serán rechazados.
 
@@ -254,6 +254,15 @@ fetch(`${BASE_URL}/api/v1/chat/history`, {
    - `[WALL-E / error IA local]`: fallo técnico al invocar Ollama.
 
 6. **Negativas falsas del LLM**: Para consultas seguras de bienestar, el cliente IA reintenta con una instrucción más específica antes de mostrar `[WALL-E / IA local no respondió]`. Si aun así hay rechazo, esa negativa no se guarda como respuesta del asistente en el historial.
+
+7. **Reset y guardado natural**: `reset chat` limpia solo el historial temporal del chat. `guarda esta respuesta` guarda la última respuesta útil del asistente en notas, sin tocar memoria permanente.
+
+## Cambios v1.3.3
+
+- Se agrega `reset chat` para limpiar el contexto temporal por chat.
+- El historial conversacional baja de 20 a 10 mensajes para reducir arrastre de contexto.
+- Se agrega guardado natural de la última respuesta útil en notas.
+- El prompt base refuerza que el historial solo debe usarse si el tema continúa claramente.
 
 ## Cambios v1.3.2
 

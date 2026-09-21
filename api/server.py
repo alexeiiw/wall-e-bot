@@ -5,7 +5,7 @@ Endpoints:
 - GET /health -> Health check
 - GET /api/v1/health -> Health check versionado
 - POST /api/v1/chat/send -> Enviar mensaje y obtener respuesta
-- GET /api/v1/chat/history -> Obtener historial de últimos 20 mensajes
+- GET /api/v1/chat/history -> Obtener historial de últimos 10 mensajes
 """
 
 from fastapi import FastAPI, HTTPException, Depends
@@ -121,12 +121,12 @@ async def send_message(request: MessageRequest, token = Depends(verify_bearer_to
 @app.get("/api/v1/chat/history", response_model=HistoryResponse)
 async def get_history(token = Depends(verify_bearer_token)):
     """
-    Endpoint para obtener el historial de últimos 20 mensajes.
+    Endpoint para obtener el historial de últimos 10 mensajes.
     
     Requiere: Authorization: Bearer <BACKEND_SECRET_KEY>
     
     Returns:
-        { "status": "ok", "history": [...últimos 20 mensajes...] }
+        { "status": "ok", "history": [...últimos 10 mensajes...] }
     """
     try:
         # Obtener historial del chat_id especial "api"

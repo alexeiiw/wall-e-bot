@@ -34,7 +34,10 @@ _INSTRUCCIONES_BASE = (
     "consensual, no explícita y no pida diagnóstico médico; da consejos generales y recomienda consultar "
     "a un profesional si hay dolor, síntomas persistentes, medicación o preocupación clínica. "
     "Si el usuario habla de objetos, plantas, herramientas o mascotas, entiende que pide recomendaciones "
-    "sobre eso; no interpretes que tú debes ejecutar físicamente la acción."
+    "sobre eso; no interpretes que tú debes ejecutar físicamente la acción. "
+    "Usa el historial solo si el mensaje actual continúa claramente el mismo tema; si cambia de tema, "
+    "responde la nueva consulta sin arrastrar contexto anterior. "
+    "Responde en máximo 5 puntos salvo que el usuario pida más detalle."
 )
 
 
